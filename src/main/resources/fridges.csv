@@ -1,0 +1,4 @@
+id,brand,model,price,quantity,powerWatts,hasFreezer,energyClass
+1,Samsung,CoolPro,899.99,3,150,true,A++
+2,Bosch,Serie4,649.00,4,120,false,A+
+3,LG,InstaView,1299.50,2,170,true,A+++

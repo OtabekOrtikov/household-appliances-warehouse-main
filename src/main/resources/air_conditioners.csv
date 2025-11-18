@@ -1,0 +1,4 @@
+id,brand,model,price,quantity,powerWatts,heating,noiseLevel
+1,LG,ArtCool,799.99,5,2200,true,38.5
+2,Daikin,Perfera,999.00,3,2000,true,40.0
+3,Midea,Breezeless,549.50,10,1800,false,35.0

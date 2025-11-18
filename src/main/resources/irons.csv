@@ -1,0 +1,4 @@
+id,brand,model,price,quantity,powerWatts,waterTankCapacity
+1,Philips,SteamMaster,129.99,10,2400,0.35
+2,Tefal,Ultraglide,89.50,15,2300,0.30
+3,Braun,TexStyle,99.00,8,2200,0.33
