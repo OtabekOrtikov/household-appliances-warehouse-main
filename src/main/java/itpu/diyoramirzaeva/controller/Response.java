@@ -1,7 +1,8 @@
 package itpu.diyoramirzaeva.controller;
 
 /**
- * Result of executing a {@link Request}. The view layer prints the response string
+ * Result of executing a {@link Request}. The view layer prints the response
+ * string
  * and decides whether to continue the interaction loop.
  */
 public interface Response {
@@ -19,4 +20,6 @@ public interface Response {
      * Signals that the response describes an error.
      */
     boolean isError();
+
+    Object getData();
 }

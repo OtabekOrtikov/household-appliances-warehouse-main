@@ -8,17 +8,27 @@ import itpu.diyoramirzaeva.view.ViewFactory;
 
 public class Main {
     public static void main(String[] args) {
-        String propertiesName = args.length == 0 ? "app" : args[0];
-        // fallback view to show crash message if config fails
+        if (args.length > 0 && args[0].equalsIgnoreCase("gui")) {
+            launchGUI();
+        } else {
+            launchConsole();
+        }
+    }
+
+    private static void launchConsole() {
         View view = new ConsoleViewImpl();
         try {
-            Config config = new PropertiesConfigImpl(propertiesName);
+            Config config = new PropertiesConfigImpl("app");
             config.init();
-            view = ViewFactory.getInstance();
+            ViewFactory.init(view);
             view.start();
         } catch (RuntimeException e) {
             view.crash();
             e.printStackTrace(System.err);
         }
+    }
+
+    private static void launchGUI() {
+        System.out.println("GUI is not implemented yet. Please run with 'console' argument.");
     }
 }

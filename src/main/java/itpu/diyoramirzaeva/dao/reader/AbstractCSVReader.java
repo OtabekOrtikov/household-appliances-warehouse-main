@@ -40,15 +40,17 @@ public abstract class AbstractCSVReader<T> {
                     continue;
                 }
                 line = line.trim();
-                if (line.isEmpty()) continue;
+                if (line.isEmpty())
+                    continue;
                 String[] tokens = line.split(delimiter);
                 for (int i = 0; i < tokens.length; i++) {
                     tokens[i] = tokens[i].trim();
                 }
                 try {
                     result.add(parse(tokens));
-                } catch (Exception parseEx) {
-                    throw new DaoException("Failed to parse CSV line: '" + line + "' in resource: " + resourcePath, parseEx);
+                } catch (NumberFormatException | IndexOutOfBoundsException parseEx) {
+                    throw new DaoException("Failed to parse CSV line: '" + line + "' in resource: " + resourcePath,
+                            parseEx);
                 }
             }
         } catch (IOException e) {

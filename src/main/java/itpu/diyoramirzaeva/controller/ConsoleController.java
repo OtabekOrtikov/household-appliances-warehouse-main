@@ -19,8 +19,6 @@ import itpu.diyoramirzaeva.service.factory.ServiceFactory;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * Command-based controller that accepts requests from the view layer.
@@ -37,8 +35,8 @@ public class ConsoleController implements Controller {
     }
 
     public ConsoleController(ApplianceService<AirConditioner> acService,
-                             ApplianceService<Fridge> fridgeService,
-                             ApplianceService<Iron> ironService) {
+            ApplianceService<Fridge> fridgeService,
+            ApplianceService<Iron> ironService) {
         this.acService = acService;
         this.fridgeService = fridgeService;
         this.ironService = ironService;
@@ -54,7 +52,8 @@ public class ConsoleController implements Controller {
             case "list" -> list(request);
             case "search" -> search(request);
             case "exit", "quit", "out" -> ResponseImpl.exit("Bye! See you soon.");
-            default -> ResponseImpl.error("Unknown command: '" + request.raw() + "'. Type 'help' for the command list.");
+            default ->
+                ResponseImpl.error("Unknown command: '" + request.raw() + "'. Type 'help' for the command list.");
         };
     }
 
@@ -75,13 +74,13 @@ public class ConsoleController implements Controller {
 
     private Response list(Request request) {
         if (request.arguments().isEmpty() || "all".equals(request.arguments().get(0))) {
-            return ResponseImpl.ok(listAll());
+            return ResponseImpl.ok("All items:", listAll());
         }
         Category category = resolveCategory(request.arguments().get(0));
         if (category == null) {
             return ResponseImpl.error("Unknown category: " + request.arguments().get(0));
         }
-        return ResponseImpl.ok(listByCategory(category));
+        return ResponseImpl.ok(category.name() + ":", listByCategory(category));
     }
 
     private Response search(Request request) {
@@ -99,19 +98,19 @@ public class ConsoleController implements Controller {
         };
     }
 
-    private String listAll() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(section("Air conditioners", acService.getAll()));
-        sb.append(section("Fridges", fridgeService.getAll()));
-        sb.append(section("Irons", ironService.getAll()));
-        return sb.toString();
+    private List<Household> listAll() {
+        List<Household> all = new java.util.ArrayList<>();
+        all.addAll(acService.getAll());
+        all.addAll(fridgeService.getAll());
+        all.addAll(ironService.getAll());
+        return all;
     }
 
-    private String listByCategory(Category category) {
+    private List<? extends Household> listByCategory(Category category) {
         return switch (category) {
-            case AIR -> section("Air conditioners", acService.getAll());
-            case FRIDGE -> section("Fridges", fridgeService.getAll());
-            case IRON -> section("Irons", ironService.getAll());
+            case AIR -> acService.getAll();
+            case FRIDGE -> fridgeService.getAll();
+            case IRON -> ironService.getAll();
         };
     }
 
@@ -119,17 +118,19 @@ public class ConsoleController implements Controller {
         SearchCriteria<AirConditioner> criteria = new AirConditionerCriteria();
         if (params.containsKey("heating")) {
             Boolean heating = parseBoolean(params.get("heating"));
-            if (heating == null) return ResponseImpl.error("Invalid heating value: " + params.get("heating"));
+            if (heating == null)
+                return ResponseImpl.error("Invalid heating value: " + params.get("heating"));
             criteria.add(new HeatingParam(heating));
         }
         if (params.containsKey("noise") || params.containsKey("noiselevel")) {
             String value = params.getOrDefault("noise", params.get("noiselevel"));
             Double noise = parseDouble(value);
-            if (noise == null) return ResponseImpl.error("Invalid noise value: " + value);
+            if (noise == null)
+                return ResponseImpl.error("Invalid noise value: " + value);
             criteria.add(new NoiseLevelParam(noise));
         }
         List<AirConditioner> result = acService.find(criteria);
-        return ResponseImpl.ok(section("Search result (air conditioners)", result));
+        return ResponseImpl.ok("Search result (air conditioners):", result);
     }
 
     private Response searchFridge(Map<String, String> params) {
@@ -137,7 +138,8 @@ public class ConsoleController implements Controller {
         if (params.containsKey("hasfreezer") || params.containsKey("freezer")) {
             String value = params.getOrDefault("hasfreezer", params.get("freezer"));
             Boolean hasFreezer = parseBoolean(value);
-            if (hasFreezer == null) return ResponseImpl.error("Invalid hasFreezer value: " + value);
+            if (hasFreezer == null)
+                return ResponseImpl.error("Invalid hasFreezer value: " + value);
             criteria.add(new HasFreezerParam(hasFreezer));
         }
         if (params.containsKey("energyclass") || params.containsKey("class")) {
@@ -147,7 +149,7 @@ public class ConsoleController implements Controller {
             }
         }
         List<Fridge> result = fridgeService.find(criteria);
-        return ResponseImpl.ok(section("Search result (fridges)", result));
+        return ResponseImpl.ok("Search result (fridges):", result);
     }
 
     private Response searchIron(Map<String, String> params) {
@@ -155,35 +157,30 @@ public class ConsoleController implements Controller {
         if (params.containsKey("capacity") || params.containsKey("watertankcapacity")) {
             String value = params.getOrDefault("capacity", params.get("watertankcapacity"));
             Double capacity = parseDouble(value);
-            if (capacity == null) return ResponseImpl.error("Invalid capacity value: " + value);
+            if (capacity == null)
+                return ResponseImpl.error("Invalid capacity value: " + value);
             criteria.add(new WaterTankCapacityParam(capacity));
         }
         List<Iron> result = ironService.find(criteria);
-        return ResponseImpl.ok(section("Search result (irons)", result));
-    }
-
-    private String section(String title, List<? extends Household> items) {
-        if (items == null || items.isEmpty()) {
-            return title + ":\n  (nothing found)\n";
-        }
-        String joined = items.stream()
-                .filter(Objects::nonNull)
-                .map(Household::toString)
-                .collect(Collectors.joining("\n"));
-        return title + ":\n" + joined + "\n";
+        return ResponseImpl.ok("Search result (irons):", result);
     }
 
     private Boolean parseBoolean(String value) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String v = value.trim().toLowerCase(Locale.ROOT);
-        if (v.isEmpty()) return null;
-        if (v.equals("true") || v.equals("t") || v.equals("yes") || v.equals("y") || v.equals("1")) return true;
-        if (v.equals("false") || v.equals("f") || v.equals("no") || v.equals("n") || v.equals("0")) return false;
+        if (v.isEmpty())
+            return null;
+        if (v.equals("true") || v.equals("t") || v.equals("yes") || v.equals("y") || v.equals("1"))
+            return true;
+        if (v.equals("false") || v.equals("f") || v.equals("no") || v.equals("n") || v.equals("0"))
+            return false;
         return null;
     }
 
     private Double parseDouble(String value) {
-        if (value == null || value.trim().isEmpty()) return null;
+        if (value == null || value.trim().isEmpty())
+            return null;
         try {
             return Double.parseDouble(value.trim());
         } catch (NumberFormatException ex) {

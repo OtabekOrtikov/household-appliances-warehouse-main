@@ -50,6 +50,9 @@ public class ConsoleViewImpl implements View {
                 Request request = RequestFactory.fromUserInput(line);
                 response = activeController.execute(request);
                 System.out.println(response.responseString());
+                if (response.getData() != null) {
+                    printData(response.getData());
+                }
             } while (!response.isOut());
         }
     }
@@ -58,5 +61,32 @@ public class ConsoleViewImpl implements View {
     public void crash() {
         final String msg = "Sorry, something went wrong...";
         System.out.println(msg);
+    }
+
+    private void printData(Object data) {
+        if (data instanceof java.util.List<?> list) {
+            if (list.isEmpty()) {
+                System.out.println("  (nothing found)");
+                return;
+            }
+            for (Object item : list) {
+                if (item instanceof itpu.diyoramirzaeva.entity.Household h) {
+                    System.out.println(formatHousehold(h));
+                } else {
+                    System.out.println(item);
+                }
+            }
+        } else {
+            System.out.println(data);
+        }
+    }
+
+    private String formatHousehold(itpu.diyoramirzaeva.entity.Household h) {
+        // Example: "Laptop: Huawei MateBook | Price: 45000 | Weight: 1.8"
+        // We need to check specific types to show relevant fields, or just improve
+        // generic toString
+        // For now, let's make a generic improved format
+        return String.format("  - %s | Price: %.2f", h.toString(), h.getPrice());
+
     }
 }
