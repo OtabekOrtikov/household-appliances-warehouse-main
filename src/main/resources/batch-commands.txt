@@ -1,0 +1,6 @@
+help
+list all
+search air heating=true noise=38.5
+search fridge hasFreezer=true
+search iron capacity=0.35
+exit

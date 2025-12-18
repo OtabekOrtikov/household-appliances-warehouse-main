@@ -10,7 +10,15 @@ import java.util.List;
 import java.util.Optional;
 
 public class IronServiceImpl implements ApplianceService<Iron> {
-    private final Dao<Iron> dao = DaoFactory.getIronDao();
+    private final Dao<Iron> dao;
+
+    public IronServiceImpl() {
+        this(DaoFactory.getIronDao());
+    }
+
+    public IronServiceImpl(Dao<Iron> dao) {
+        this.dao = dao;
+    }
 
     @Override
     public List<Iron> getAll() {

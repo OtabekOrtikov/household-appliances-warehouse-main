@@ -8,22 +8,40 @@ import itpu.diyoramirzaeva.service.impl.AirConditionerServiceImpl;
 import itpu.diyoramirzaeva.service.impl.FridgeServiceImpl;
 import itpu.diyoramirzaeva.service.impl.IronServiceImpl;
 
+import java.util.Objects;
+
 public final class ServiceFactory {
-    private static final ApplianceService<AirConditioner> AC_SERVICE = new AirConditionerServiceImpl();
-    private static final ApplianceService<Fridge> FRIDGE_SERVICE = new FridgeServiceImpl();
-    private static final ApplianceService<Iron> IRON_SERVICE = new IronServiceImpl();
+    private static ApplianceService<AirConditioner> acService;
+    private static ApplianceService<Fridge> fridgeService;
+    private static ApplianceService<Iron> ironService;
+
+    static {
+        resetToDefaults();
+    }
 
     private ServiceFactory() {}
 
+    public static void init(ApplianceService<AirConditioner> ac,
+                            ApplianceService<Fridge> fridge,
+                            ApplianceService<Iron> iron) {
+        acService = Objects.requireNonNull(ac, "acService");
+        fridgeService = Objects.requireNonNull(fridge, "fridgeService");
+        ironService = Objects.requireNonNull(iron, "ironService");
+    }
+
+    public static void resetToDefaults() {
+        init(new AirConditionerServiceImpl(), new FridgeServiceImpl(), new IronServiceImpl());
+    }
+
     public static ApplianceService<AirConditioner> airConditionerService() {
-        return AC_SERVICE;
+        return acService;
     }
 
     public static ApplianceService<Fridge> fridgeService() {
-        return FRIDGE_SERVICE;
+        return fridgeService;
     }
 
     public static ApplianceService<Iron> ironService() {
-        return IRON_SERVICE;
+        return ironService;
     }
 }

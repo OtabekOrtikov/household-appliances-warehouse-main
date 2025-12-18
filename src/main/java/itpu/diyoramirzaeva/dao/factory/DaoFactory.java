@@ -8,22 +8,40 @@ import itpu.diyoramirzaeva.entity.AirConditioner;
 import itpu.diyoramirzaeva.entity.Fridge;
 import itpu.diyoramirzaeva.entity.Iron;
 
+import java.util.Objects;
+
 public final class DaoFactory {
-    private static final Dao<AirConditioner> AIR_CONDITIONER_DAO = new AirConditionerCsvDao();
-    private static final Dao<Fridge> FRIDGE_DAO = new FridgeCsvDao();
-    private static final Dao<Iron> IRON_DAO = new IronCsvDao();
+    private static Dao<AirConditioner> airConditionerDao;
+    private static Dao<Fridge> fridgeDao;
+    private static Dao<Iron> ironDao;
+
+    static {
+        resetToDefaults();
+    }
 
     private DaoFactory() {}
 
+    public static void init(Dao<AirConditioner> airDao,
+                            Dao<Fridge> frDao,
+                            Dao<Iron> irDao) {
+        airConditionerDao = Objects.requireNonNull(airDao, "airDao");
+        fridgeDao = Objects.requireNonNull(frDao, "fridgeDao");
+        ironDao = Objects.requireNonNull(irDao, "ironDao");
+    }
+
+    public static void resetToDefaults() {
+        init(new AirConditionerCsvDao(), new FridgeCsvDao(), new IronCsvDao());
+    }
+
     public static Dao<AirConditioner> getAirConditionerDao() {
-        return AIR_CONDITIONER_DAO;
+        return airConditionerDao;
     }
 
     public static Dao<Fridge> getFridgeDao() {
-        return FRIDGE_DAO;
+        return fridgeDao;
     }
 
     public static Dao<Iron> getIronDao() {
-        return IRON_DAO;
+        return ironDao;
     }
 }

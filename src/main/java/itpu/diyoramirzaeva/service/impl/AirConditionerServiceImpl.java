@@ -10,7 +10,15 @@ import java.util.List;
 import java.util.Optional;
 
 public class AirConditionerServiceImpl implements ApplianceService<AirConditioner> {
-    private final Dao<AirConditioner> dao = DaoFactory.getAirConditionerDao();
+    private final Dao<AirConditioner> dao;
+
+    public AirConditionerServiceImpl() {
+        this(DaoFactory.getAirConditionerDao());
+    }
+
+    public AirConditionerServiceImpl(Dao<AirConditioner> dao) {
+        this.dao = dao;
+    }
 
     @Override
     public List<AirConditioner> getAll() {

@@ -10,7 +10,15 @@ import java.util.List;
 import java.util.Optional;
 
 public class FridgeServiceImpl implements ApplianceService<Fridge> {
-    private final Dao<Fridge> dao = DaoFactory.getFridgeDao();
+    private final Dao<Fridge> dao;
+
+    public FridgeServiceImpl() {
+        this(DaoFactory.getFridgeDao());
+    }
+
+    public FridgeServiceImpl(Dao<Fridge> dao) {
+        this.dao = dao;
+    }
 
     @Override
     public List<Fridge> getAll() {

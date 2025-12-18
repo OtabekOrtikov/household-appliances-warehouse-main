@@ -11,155 +11,196 @@ import itpu.diyoramirzaeva.dao.searchCriteria.IronCriteria;
 import itpu.diyoramirzaeva.dao.searchCriteria.SearchCriteria;
 import itpu.diyoramirzaeva.entity.AirConditioner;
 import itpu.diyoramirzaeva.entity.Fridge;
+import itpu.diyoramirzaeva.entity.Household;
 import itpu.diyoramirzaeva.entity.Iron;
 import itpu.diyoramirzaeva.service.api.ApplianceService;
 import itpu.diyoramirzaeva.service.factory.ServiceFactory;
-import itpu.diyoramirzaeva.view.ConsoleView;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Scanner;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
-public class ConsoleController {
-    private final ConsoleView view;
-    private final Scanner scanner;
-
+/**
+ * Command-based controller that accepts requests from the view layer.
+ */
+public class ConsoleController implements Controller {
     private final ApplianceService<AirConditioner> acService;
     private final ApplianceService<Fridge> fridgeService;
     private final ApplianceService<Iron> ironService;
 
     public ConsoleController() {
-        this(new ConsoleView(), new Scanner(System.in),
-                ServiceFactory.airConditionerService(),
+        this(ServiceFactory.airConditionerService(),
                 ServiceFactory.fridgeService(),
                 ServiceFactory.ironService());
     }
 
-    public ConsoleController(ConsoleView view,
-                             Scanner scanner,
-                             ApplianceService<AirConditioner> acService,
+    public ConsoleController(ApplianceService<AirConditioner> acService,
                              ApplianceService<Fridge> fridgeService,
                              ApplianceService<Iron> ironService) {
-        this.view = view;
-        this.scanner = scanner;
         this.acService = acService;
         this.fridgeService = fridgeService;
         this.ironService = ironService;
     }
 
-    public void run() {
-        while (true) {
-            view.showMainMenu();
-            String choice = scanner.nextLine().trim();
-            switch (choice) {
-                case "1" -> showAllProducts();
-                case "2" -> showByCategory();
-                case "3" -> search();
-                case "0", "exit", "quit" -> {
-                    view.print("Exiting...");
-                    return;
-                }
-                default -> view.printError("Unknown command. Please try again.");
+    @Override
+    public Response execute(Request request) {
+        String command = request.command();
+        if (command.isEmpty() || "help".equals(command)) {
+            return help();
+        }
+        return switch (command) {
+            case "list" -> list(request);
+            case "search" -> search(request);
+            case "exit", "quit", "out" -> ResponseImpl.exit("Bye! See you soon.");
+            default -> ResponseImpl.error("Unknown command: '" + request.raw() + "'. Type 'help' for the command list.");
+        };
+    }
+
+    private Response help() {
+        String msg = """
+                Household appliances warehouse CLI
+                Commands:
+                  help                               Show this help message
+                  list [all|air|fridge|iron]         Show inventory (default = all)
+                  search <air|fridge|iron> [params]  Search by parameters. Examples:
+                      search air heating=true noise=38.5
+                      search fridge hasFreezer=true energyClass=A++
+                      search iron capacity=0.35
+                  exit                               Quit the application
+                """;
+        return ResponseImpl.ok(msg);
+    }
+
+    private Response list(Request request) {
+        if (request.arguments().isEmpty() || "all".equals(request.arguments().get(0))) {
+            return ResponseImpl.ok(listAll());
+        }
+        Category category = resolveCategory(request.arguments().get(0));
+        if (category == null) {
+            return ResponseImpl.error("Unknown category: " + request.arguments().get(0));
+        }
+        return ResponseImpl.ok(listByCategory(category));
+    }
+
+    private Response search(Request request) {
+        if (request.arguments().isEmpty()) {
+            return ResponseImpl.error("Specify a category to search: air, fridge, or iron.");
+        }
+        Category category = resolveCategory(request.arguments().get(0));
+        if (category == null) {
+            return ResponseImpl.error("Unknown category: " + request.arguments().get(0));
+        }
+        return switch (category) {
+            case AIR -> searchAir(request.parameters());
+            case FRIDGE -> searchFridge(request.parameters());
+            case IRON -> searchIron(request.parameters());
+        };
+    }
+
+    private String listAll() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(section("Air conditioners", acService.getAll()));
+        sb.append(section("Fridges", fridgeService.getAll()));
+        sb.append(section("Irons", ironService.getAll()));
+        return sb.toString();
+    }
+
+    private String listByCategory(Category category) {
+        return switch (category) {
+            case AIR -> section("Air conditioners", acService.getAll());
+            case FRIDGE -> section("Fridges", fridgeService.getAll());
+            case IRON -> section("Irons", ironService.getAll());
+        };
+    }
+
+    private Response searchAir(Map<String, String> params) {
+        SearchCriteria<AirConditioner> criteria = new AirConditionerCriteria();
+        if (params.containsKey("heating")) {
+            Boolean heating = parseBoolean(params.get("heating"));
+            if (heating == null) return ResponseImpl.error("Invalid heating value: " + params.get("heating"));
+            criteria.add(new HeatingParam(heating));
+        }
+        if (params.containsKey("noise") || params.containsKey("noiselevel")) {
+            String value = params.getOrDefault("noise", params.get("noiselevel"));
+            Double noise = parseDouble(value);
+            if (noise == null) return ResponseImpl.error("Invalid noise value: " + value);
+            criteria.add(new NoiseLevelParam(noise));
+        }
+        List<AirConditioner> result = acService.find(criteria);
+        return ResponseImpl.ok(section("Search result (air conditioners)", result));
+    }
+
+    private Response searchFridge(Map<String, String> params) {
+        SearchCriteria<Fridge> criteria = new FridgeCriteria();
+        if (params.containsKey("hasfreezer") || params.containsKey("freezer")) {
+            String value = params.getOrDefault("hasfreezer", params.get("freezer"));
+            Boolean hasFreezer = parseBoolean(value);
+            if (hasFreezer == null) return ResponseImpl.error("Invalid hasFreezer value: " + value);
+            criteria.add(new HasFreezerParam(hasFreezer));
+        }
+        if (params.containsKey("energyclass") || params.containsKey("class")) {
+            String value = params.getOrDefault("energyclass", params.get("class"));
+            if (value != null && !value.isBlank()) {
+                criteria.add(new EnergyClassParam(value.trim()));
             }
         }
-    }
-
-    private void showAllProducts() {
-        view.print("=== Air Conditioners ===");
-        view.printList(acService.getAll());
-        view.print("=== Fridges ===");
-        view.printList(fridgeService.getAll());
-        view.print("=== Irons ===");
-        view.printList(ironService.getAll());
-    }
-
-    private void showByCategory() {
-        view.showCategoryMenu();
-        String c = scanner.nextLine().trim();
-        switch (c) {
-            case "1" -> view.printList(acService.getAll());
-            case "2" -> view.printList(fridgeService.getAll());
-            case "3" -> view.printList(ironService.getAll());
-            default -> view.printError("Unknown category.");
-        }
-    }
-
-    private void search() {
-        view.showCategoryMenu();
-        String c = scanner.nextLine().trim();
-        switch (c) {
-            case "1" -> searchAirConditioners();
-            case "2" -> searchFridges();
-            case "3" -> searchIrons();
-            default -> view.printError("Unknown category.");
-        }
-    }
-
-    private void searchAirConditioners() {
-        SearchCriteria<AirConditioner> criteria = new AirConditionerCriteria();
-
-    view.print("Search parameters (empty = skip):");
-    Boolean heating = askBoolean("Heating (true/false): ");
-        if (heating != null) criteria.add(new HeatingParam(heating));
-
-    Double noise = askDouble("Noise level (e.g., 38.5): ");
-        if (noise != null) criteria.add(new NoiseLevelParam(noise));
-
-        List<AirConditioner> result = acService.find(criteria);
-        view.printList(result);
-    }
-
-    private void searchFridges() {
-        SearchCriteria<Fridge> criteria = new FridgeCriteria();
-
-    view.print("Search parameters (empty = skip):");
-    Boolean hasFreezer = askBoolean("Has freezer (true/false): ");
-        if (hasFreezer != null) criteria.add(new HasFreezerParam(hasFreezer));
-
-        String energyClass = askString("Energy class (A+, A++, A+++ ...): ");
-        if (energyClass != null) criteria.add(new EnergyClassParam(energyClass));
-
         List<Fridge> result = fridgeService.find(criteria);
-        view.printList(result);
+        return ResponseImpl.ok(section("Search result (fridges)", result));
     }
 
-    private void searchIrons() {
+    private Response searchIron(Map<String, String> params) {
         SearchCriteria<Iron> criteria = new IronCriteria();
-
-    view.print("Search parameters (empty = skip):");
-    Double capacity = askDouble("Water tank capacity (e.g., 0.35): ");
-        if (capacity != null) criteria.add(new WaterTankCapacityParam(capacity));
-
+        if (params.containsKey("capacity") || params.containsKey("watertankcapacity")) {
+            String value = params.getOrDefault("capacity", params.get("watertankcapacity"));
+            Double capacity = parseDouble(value);
+            if (capacity == null) return ResponseImpl.error("Invalid capacity value: " + value);
+            criteria.add(new WaterTankCapacityParam(capacity));
+        }
         List<Iron> result = ironService.find(criteria);
-        view.printList(result);
+        return ResponseImpl.ok(section("Search result (irons)", result));
     }
 
-    private String askString(String prompt) {
-        System.out.print(prompt);
-        String s = scanner.nextLine().trim();
-        if (s.isEmpty()) return null;
-        return s;
+    private String section(String title, List<? extends Household> items) {
+        if (items == null || items.isEmpty()) {
+            return title + ":\n  (nothing found)\n";
+        }
+        String joined = items.stream()
+                .filter(Objects::nonNull)
+                .map(Household::toString)
+                .collect(Collectors.joining("\n"));
+        return title + ":\n" + joined + "\n";
     }
 
-    private Boolean askBoolean(String prompt) {
-        System.out.print(prompt);
-        String s = scanner.nextLine().trim().toLowerCase(Locale.ROOT);
-        if (s.isEmpty()) return null;
-        if (s.equals("true") || s.equals("t") || s.equals("yes") || s.equals("y") || s.equals("1")) return true;
-        if (s.equals("false") || s.equals("f") || s.equals("no") || s.equals("n") || s.equals("0")) return false;
-        view.printError("Invalid value, skipping parameter.");
+    private Boolean parseBoolean(String value) {
+        if (value == null) return null;
+        String v = value.trim().toLowerCase(Locale.ROOT);
+        if (v.isEmpty()) return null;
+        if (v.equals("true") || v.equals("t") || v.equals("yes") || v.equals("y") || v.equals("1")) return true;
+        if (v.equals("false") || v.equals("f") || v.equals("no") || v.equals("n") || v.equals("0")) return false;
         return null;
     }
 
-    private Double askDouble(String prompt) {
-        System.out.print(prompt);
-        String s = scanner.nextLine().trim();
-        if (s.isEmpty()) return null;
+    private Double parseDouble(String value) {
+        if (value == null || value.trim().isEmpty()) return null;
         try {
-            return Double.parseDouble(s);
-        } catch (NumberFormatException e) {
-            view.printError("Invalid number, skipping parameter.");
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException ex) {
             return null;
         }
+    }
+
+    private Category resolveCategory(String token) {
+        return switch (token.toLowerCase(Locale.ROOT)) {
+            case "1", "air", "ac", "airconditioner", "air_conditioner", "air-conditioner" -> Category.AIR;
+            case "2", "fridge", "refrigerator" -> Category.FRIDGE;
+            case "3", "iron" -> Category.IRON;
+            default -> null;
+        };
+    }
+
+    private enum Category {
+        AIR, FRIDGE, IRON
     }
 }

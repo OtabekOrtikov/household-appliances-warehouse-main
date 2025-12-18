@@ -5,10 +5,20 @@ import itpu.diyoramirzaeva.dao.reader.AbstractCSVReader;
 import itpu.diyoramirzaeva.entity.Iron;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public class IronCsvDao extends AbstractCSVReader<Iron> implements Dao<Iron> {
-    private static final String RESOURCE = "irons.csv";
+    private static final String DEFAULT_RESOURCE = "irons.csv";
+    private final String resource;
+
+    public IronCsvDao() {
+        this(DEFAULT_RESOURCE);
+    }
+
+    public IronCsvDao(String resource) {
+        this.resource = Objects.requireNonNull(resource, "resource");
+    }
 
     @Override
     protected Iron parse(String[] f) {
@@ -24,7 +34,7 @@ public class IronCsvDao extends AbstractCSVReader<Iron> implements Dao<Iron> {
 
     @Override
     public List<Iron> findAll() {
-        return readFromResource(RESOURCE);
+        return readFromResource(resource);
     }
 
     @Override

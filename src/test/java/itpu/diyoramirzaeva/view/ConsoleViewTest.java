@@ -2,43 +2,30 @@ package itpu.diyoramirzaeva.view;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ConsoleViewTest {
+class ConsoleViewTest {
+
     @Test
-    void showMainMenuIsEnglish() {
-        ConsoleView view = new ConsoleView();
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PrintStream old = System.out;
-        try {
-            System.setOut(new PrintStream(out));
-            view.showMainMenu();
-        } finally {
-            System.setOut(old);
-        }
-        String s = out.toString();
-        assertTrue(s.contains("Household Warehouse - Menu"));
-        assertTrue(s.contains("Show all products"));
-        assertTrue(s.contains("Exit"));
+    void emptyInputIsInvalid() {
+        UserInputValidator validator = new UserInputValidator();
+        UserInputValidator.ValidationResult result = validator.validate("   ");
+        assertFalse(result.success());
+        assertTrue(result.message().toLowerCase().contains("empty"));
     }
 
     @Test
-    void showCategoryMenuIsEnglish() {
-        ConsoleView view = new ConsoleView();
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PrintStream old = System.out;
-        try {
-            System.setOut(new PrintStream(out));
-            view.showCategoryMenu();
-        } finally {
-            System.setOut(old);
-        }
-        String s = out.toString();
-        assertTrue(s.contains("Categories"));
-        assertTrue(s.contains("Air Conditioners"));
-        assertTrue(s.contains("Irons"));
+    void searchWithoutCategoryIsInvalid() {
+        UserInputValidator validator = new UserInputValidator();
+        UserInputValidator.ValidationResult result = validator.validate("search   ");
+        assertFalse(result.success());
+        assertTrue(result.message().toLowerCase().contains("category"));
+    }
+
+    @Test
+    void validSearchPasses() {
+        UserInputValidator validator = new UserInputValidator();
+        UserInputValidator.ValidationResult result = validator.validate("search iron capacity=0.5");
+        assertTrue(result.success());
     }
 }

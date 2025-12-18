@@ -5,10 +5,20 @@ import itpu.diyoramirzaeva.dao.reader.AbstractCSVReader;
 import itpu.diyoramirzaeva.entity.AirConditioner;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public class AirConditionerCsvDao extends AbstractCSVReader<AirConditioner> implements Dao<AirConditioner> {
-    private static final String RESOURCE = "air_conditioners.csv";
+    private static final String DEFAULT_RESOURCE = "air_conditioners.csv";
+    private final String resource;
+
+    public AirConditionerCsvDao() {
+        this(DEFAULT_RESOURCE);
+    }
+
+    public AirConditionerCsvDao(String resource) {
+        this.resource = Objects.requireNonNull(resource, "resource");
+    }
 
     @Override
     protected AirConditioner parse(String[] f) {
@@ -25,7 +35,7 @@ public class AirConditionerCsvDao extends AbstractCSVReader<AirConditioner> impl
 
     @Override
     public List<AirConditioner> findAll() {
-        return readFromResource(RESOURCE);
+        return readFromResource(resource);
     }
 
     @Override
